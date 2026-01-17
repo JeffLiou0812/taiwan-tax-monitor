@@ -14,11 +14,14 @@ print(f"目前位置: {os.getcwd()}")
 test_data = {
     "訊息": "恭喜！爬蟲環境設定成功",
     "時間": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-    "使用者": "fengy"
+    "使用者": "user"
 }
 
-# 儲存到data資料夾
-save_path = r"C:\Users\fengy\TaxMonitor\TaxMonitor\data\test_result.json"
+# 儲存到data資料夾 (use project directory)
+base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+data_path = os.path.join(base_path, "data")
+os.makedirs(data_path, exist_ok=True)
+save_path = os.path.join(data_path, "test_result.json")
 
 try:
     with open(save_path, 'w', encoding='utf-8') as f:

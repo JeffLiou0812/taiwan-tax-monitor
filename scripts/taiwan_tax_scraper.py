@@ -11,10 +11,14 @@ print("=" * 60)
 print("台灣稅務資料爬蟲 v1.0")
 print("=" * 60)
 
-# 設定資料儲存路徑
-base_path = r"C:\Users\fengy\TaxMonitor\TaxMonitor"
+# 設定資料儲存路徑 (use project directory)
+base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 data_path = os.path.join(base_path, "data")
 log_path = os.path.join(base_path, "logs")
+
+# Ensure directories exist
+os.makedirs(data_path, exist_ok=True)
+os.makedirs(log_path, exist_ok=True)
 
 print(f"\n工作目錄: {os.getcwd()}")
 print(f"資料將儲存到: {data_path}")
