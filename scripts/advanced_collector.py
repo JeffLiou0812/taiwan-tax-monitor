@@ -9,7 +9,10 @@ from database_manager import TaxDatabaseManager
 
 class AdvancedTaxCollector:
     def __init__(self):
-        self.base_path = r"C:\Users\fengy\TaxMonitor\TaxMonitor"
+        # Use the project directory (parent of scripts folder)
+        self.base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # Ensure data directory exists
+        os.makedirs(os.path.join(self.base_path, 'data'), exist_ok=True)
         self.db = TaxDatabaseManager()
         
         # 多元化資料源策略

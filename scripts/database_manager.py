@@ -6,8 +6,11 @@ from datetime import datetime
 
 class TaxDatabaseManager:
     def __init__(self):
-        self.base_path = r"C:\Users\fengy\TaxMonitor\TaxMonitor"
+        # Use the project directory (parent of scripts folder)
+        self.base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.db_path = os.path.join(self.base_path, "data", "tax_monitor.db")
+        # Ensure data directory exists
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         self.init_database()
         
     def init_database(self):

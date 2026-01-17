@@ -9,8 +9,11 @@ import re
 
 class MOFTaxScraper:
     def __init__(self):
-        self.base_path = r"C:\Users\fengy\TaxMonitor\TaxMonitor"
+        # Use the project directory (parent of scripts folder)
+        self.base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.data_path = os.path.join(self.base_path, "data")
+        # Ensure data directory exists
+        os.makedirs(self.data_path, exist_ok=True)
         self.session = requests.Session()
         
         # 設定請求標頭
