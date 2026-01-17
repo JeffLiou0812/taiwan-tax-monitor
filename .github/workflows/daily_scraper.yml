@@ -27,7 +27,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install requests beautifulsoup4 pandas lxml chardet
+        pip install requests beautifulsoup4 pandas lxml chardet openpyxl
 
     - name: Create data directory
       run: mkdir -p data

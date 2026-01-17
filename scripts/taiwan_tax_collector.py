@@ -5,6 +5,7 @@ import json
 import os
 from datetime import datetime, timedelta
 import time
+import pandas as pd
 
 class TaiwanTaxCollector:
     def __init__(self):
@@ -61,7 +62,7 @@ class TaiwanTaxCollector:
                 'summary': '有關營利事業列報旅費支出之認定標準，修正相關規定。',
                 'category': '營利事業所得稅',
                 'url': 'https://www.mof.gov.tw/singlehtml/384fb3077bb349ea973e7fc6f13b6974',
-                'time': (base_date - timedelta(days=1)).isoformat()
+                'time': (base_date - timedelta(days=1)).strftime('%Y-%m-%d')
             },
             {
                 'title': '財政部函釋：個人出售房地適用房地合一稅2.0相關疑義',
@@ -69,7 +70,7 @@ class TaiwanTaxCollector:
                 'summary': '說明個人出售105年1月1日以後取得之房屋、土地，應如何計算持有期間。',
                 'category': '房地合一稅',
                 'url': 'https://www.mof.gov.tw/singlehtml/384fb3077bb349ea973e7fc6f13b6975',
-                'time': (base_date - timedelta(days=2)).isoformat()
+                'time': (base_date - timedelta(days=2)).strftime('%Y-%m-%d')
             },
             {
                 'title': '財政部公告：113年度營利事業所得稅結算申報注意事項',
@@ -77,7 +78,7 @@ class TaiwanTaxCollector:
                 'summary': '提醒營利事業辦理113年度所得稅結算申報應注意事項。',
                 'category': '營利事業所得稅',
                 'url': 'https://www.mof.gov.tw/singlehtml/384fb3077bb349ea973e7fc6f13b6976',
-                'time': (base_date - timedelta(days=3)).isoformat()
+                'time': (base_date - timedelta(days=3)).strftime('%Y-%m-%d')
             },
             {
                 'title': '財政部令：統一發票給獎辦法部分條文修正',
@@ -85,7 +86,7 @@ class TaiwanTaxCollector:
                 'summary': '修正統一發票中獎獎金金額及領獎相關規定。',
                 'category': '統一發票',
                 'url': 'https://www.mof.gov.tw/singlehtml/384fb3077bb349ea973e7fc6f13b6977',
-                'time': (base_date - timedelta(days=4)).isoformat()
+                'time': (base_date - timedelta(days=4)).strftime('%Y-%m-%d')
             },
             {
                 'title': '財政部函釋：跨境電商營業稅課徵相關規定',
@@ -93,22 +94,60 @@ class TaiwanTaxCollector:
                 'summary': '說明境外電商銷售電子勞務予境內自然人之營業稅課徵規定。',
                 'category': '營業稅',
                 'url': 'https://www.mof.gov.tw/singlehtml/384fb3077bb349ea973e7fc6f13b6978',
-                'time': (base_date - timedelta(days=5)).isoformat()
+                'time': (base_date - timedelta(days=5)).strftime('%Y-%m-%d')
             }
         ]
         print(f"✓ 載入 {len(demo_items)} 筆示範資料")
         return demo_items
 
-    def save_data(self, data):
-        """儲存資料"""
+    def save_data(self, data, items):
+        """儲存資料為 JSON 和 Excel 格式"""
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = os.path.join(self.data_path, f"tax_data_{timestamp}.json")
 
-        with open(filename, 'w', encoding='utf-8') as f:
+        # Save JSON
+        json_filename = os.path.join(self.data_path, f"tax_data_{timestamp}.json")
+        with open(json_filename, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+        print(f"✓ JSON 已儲存: {os.path.basename(json_filename)}")
 
-        print(f"✓ 資料已儲存: {os.path.basename(filename)}")
-        return filename
+        # Save Excel
+        excel_filename = os.path.join(self.data_path, f"tax_data_{timestamp}.xlsx")
+        df = pd.DataFrame(items)
+
+        # Reorder columns for better readability
+        columns_order = ['ruling_number', 'title', 'category', 'summary', 'time', 'url']
+        existing_columns = [col for col in columns_order if col in df.columns]
+        other_columns = [col for col in df.columns if col not in columns_order]
+        df = df[existing_columns + other_columns]
+
+        # Rename columns to Chinese
+        column_names = {
+            'ruling_number': '函釋字號',
+            'title': '標題',
+            'category': '類別',
+            'summary': '摘要',
+            'time': '日期',
+            'url': '連結'
+        }
+        df = df.rename(columns=column_names)
+
+        # Save to Excel with formatting
+        with pd.ExcelWriter(excel_filename, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='稅務函釋')
+
+            # Auto-adjust column widths
+            worksheet = writer.sheets['稅務函釋']
+            for idx, col in enumerate(df.columns):
+                max_length = max(
+                    df[col].astype(str).map(len).max(),
+                    len(col)
+                ) + 2
+                # Limit max width to 50
+                worksheet.column_dimensions[chr(65 + idx)].width = min(max_length, 50)
+
+        print(f"✓ Excel 已儲存: {os.path.basename(excel_filename)}")
+
+        return json_filename, excel_filename
 
     def display_results(self, data):
         """顯示收集結果"""
@@ -126,7 +165,7 @@ class TaiwanTaxCollector:
     def run(self):
         """執行主程式"""
         print("="*60)
-        print("台灣稅務資料收集器 v2.0")
+        print("台灣稅務資料收集器 v3.0")
         print("="*60)
         print(f"執行時間: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print()
@@ -145,8 +184,8 @@ class TaiwanTaxCollector:
         # 顯示結果
         self.display_results(data)
 
-        # 儲存
-        saved_file = self.save_data(full_results)
+        # 儲存 JSON 和 Excel
+        self.save_data(full_results, data)
 
         print("\n" + "="*60)
         print(f"完成！共收集 {len(data)} 筆資料")

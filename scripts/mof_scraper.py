@@ -6,6 +6,7 @@ import os
 from datetime import datetime, timedelta
 import time
 import re
+import pandas as pd
 
 class MOFTaxScraper:
     def __init__(self):
@@ -38,25 +39,10 @@ class MOFTaxScraper:
             if title:
                 print(f"✓ 成功連接: {title.text.strip()}")
 
-            # 儲存原始HTML供後續分析
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            html_file = os.path.join(self.data_path, f"mof_rulings_{timestamp}.html")
-
-            with open(html_file, 'w', encoding='utf-8') as f:
-                f.write(response.text)
-
-            print(f"✓ HTML已儲存: {os.path.basename(html_file)}")
-
             # 解析函釋資料
             rulings = self.parse_rulings(soup)
 
-            # 儲存為JSON
-            json_file = os.path.join(self.data_path, f"mof_rulings_{timestamp}.json")
-            with open(json_file, 'w', encoding='utf-8') as f:
-                json.dump(rulings, f, ensure_ascii=False, indent=2)
-
             print(f"✓ 找到 {len(rulings)} 筆函釋")
-            print(f"✓ JSON已儲存: {os.path.basename(json_file)}")
 
             return rulings
 
@@ -75,9 +61,8 @@ class MOFTaxScraper:
                 'issue_date': (base_date - timedelta(days=1)).strftime('%Y-%m-%d'),
                 'category': '營利事業所得稅',
                 'summary': '有關營利事業列報交際費支出，應以與業務有關且必要者為限，並應取具合法憑證。',
-                'keywords': ['交際費', '營所稅', '憑證'],
-                'url': 'https://www.dot.gov.tw/ch/home.jsp?id=30&parentpath=0,1',
-                'scraped_at': datetime.now().isoformat()
+                'keywords': '交際費, 營所稅, 憑證',
+                'url': 'https://www.dot.gov.tw/ch/home.jsp?id=30&parentpath=0,1'
             },
             {
                 'ruling_number': '台財稅字第11304512346號',
@@ -85,9 +70,8 @@ class MOFTaxScraper:
                 'issue_date': (base_date - timedelta(days=2)).strftime('%Y-%m-%d'),
                 'category': '綜合所得稅',
                 'summary': '說明薪資所得扣繳義務人應依規定辦理扣繳，並於期限內申報繳納。',
-                'keywords': ['扣繳', '薪資所得', '綜所稅'],
-                'url': 'https://www.dot.gov.tw/ch/home.jsp?id=30&parentpath=0,1',
-                'scraped_at': datetime.now().isoformat()
+                'keywords': '扣繳, 薪資所得, 綜所稅',
+                'url': 'https://www.dot.gov.tw/ch/home.jsp?id=30&parentpath=0,1'
             },
             {
                 'ruling_number': '台財稅字第11304512347號',
@@ -95,9 +79,8 @@ class MOFTaxScraper:
                 'issue_date': (base_date - timedelta(days=3)).strftime('%Y-%m-%d'),
                 'category': '遺產及贈與稅',
                 'summary': '被繼承人遺產中之不動產，應以死亡時之時價估價課徵遺產稅。',
-                'keywords': ['遺產稅', '不動產', '估價'],
-                'url': 'https://www.dot.gov.tw/ch/home.jsp?id=30&parentpath=0,1',
-                'scraped_at': datetime.now().isoformat()
+                'keywords': '遺產稅, 不動產, 估價',
+                'url': 'https://www.dot.gov.tw/ch/home.jsp?id=30&parentpath=0,1'
             },
             {
                 'ruling_number': '台財稅字第11304512348號',
@@ -105,9 +88,8 @@ class MOFTaxScraper:
                 'issue_date': (base_date - timedelta(days=4)).strftime('%Y-%m-%d'),
                 'category': '營業稅',
                 'summary': '營業人使用電子發票，應依規定格式開立並上傳至整合服務平台。',
-                'keywords': ['電子發票', '營業稅', '平台'],
-                'url': 'https://www.dot.gov.tw/ch/home.jsp?id=30&parentpath=0,1',
-                'scraped_at': datetime.now().isoformat()
+                'keywords': '電子發票, 營業稅, 平台',
+                'url': 'https://www.dot.gov.tw/ch/home.jsp?id=30&parentpath=0,1'
             },
             {
                 'ruling_number': '台財稅字第11304512349號',
@@ -115,21 +97,12 @@ class MOFTaxScraper:
                 'issue_date': (base_date - timedelta(days=5)).strftime('%Y-%m-%d'),
                 'category': '營業稅',
                 'summary': '境外電商銷售電子勞務予我國境內自然人，應依規定辦理稅籍登記及報繳營業稅。',
-                'keywords': ['境外電商', '電子勞務', '營業稅'],
-                'url': 'https://www.dot.gov.tw/ch/home.jsp?id=30&parentpath=0,1',
-                'scraped_at': datetime.now().isoformat()
+                'keywords': '境外電商, 電子勞務, 營業稅',
+                'url': 'https://www.dot.gov.tw/ch/home.jsp?id=30&parentpath=0,1'
             }
         ]
 
-        # 儲存示範資料
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        json_file = os.path.join(self.data_path, f"mof_rulings_{timestamp}.json")
-        with open(json_file, 'w', encoding='utf-8') as f:
-            json.dump(demo_rulings, f, ensure_ascii=False, indent=2)
-
         print(f"✓ 載入 {len(demo_rulings)} 筆示範函釋")
-        print(f"✓ JSON已儲存: {os.path.basename(json_file)}")
-
         return demo_rulings
 
     def parse_rulings(self, soup):
@@ -153,6 +126,57 @@ class MOFTaxScraper:
 
         return rulings
 
+    def save_data(self, rulings):
+        """儲存資料為 JSON 和 Excel 格式"""
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+        # Save JSON
+        json_file = os.path.join(self.data_path, f"mof_rulings_{timestamp}.json")
+        with open(json_file, 'w', encoding='utf-8') as f:
+            json.dump(rulings, f, ensure_ascii=False, indent=2)
+        print(f"✓ JSON 已儲存: {os.path.basename(json_file)}")
+
+        # Save Excel
+        excel_file = os.path.join(self.data_path, f"mof_rulings_{timestamp}.xlsx")
+        df = pd.DataFrame(rulings)
+
+        # Reorder columns for better readability
+        columns_order = ['ruling_number', 'title', 'category', 'issue_date', 'summary', 'keywords', 'url']
+        existing_columns = [col for col in columns_order if col in df.columns]
+        other_columns = [col for col in df.columns if col not in columns_order]
+        df = df[existing_columns + other_columns]
+
+        # Rename columns to Chinese
+        column_names = {
+            'ruling_number': '函釋字號',
+            'title': '標題',
+            'category': '類別',
+            'issue_date': '發布日期',
+            'summary': '摘要',
+            'keywords': '關鍵字',
+            'url': '連結',
+            'scraped_at': '擷取時間'
+        }
+        df = df.rename(columns=column_names)
+
+        # Save to Excel with formatting
+        with pd.ExcelWriter(excel_file, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='財政部函釋')
+
+            # Auto-adjust column widths
+            worksheet = writer.sheets['財政部函釋']
+            for idx, col in enumerate(df.columns):
+                max_length = max(
+                    df[col].astype(str).map(len).max(),
+                    len(col)
+                ) + 2
+                # Limit max width to 50
+                worksheet.column_dimensions[chr(65 + idx)].width = min(max_length, 50)
+
+        print(f"✓ Excel 已儲存: {os.path.basename(excel_file)}")
+
+        return json_file, excel_file
+
     def display_rulings(self, rulings):
         """顯示函釋摘要"""
         print("\n" + "="*60)
@@ -170,7 +194,7 @@ class MOFTaxScraper:
     def run(self):
         """執行爬蟲"""
         print("="*60)
-        print("財政部稅務函釋爬蟲 v2.0")
+        print("財政部稅務函釋爬蟲 v3.0")
         print("="*60)
         print(f"執行時間: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print()
@@ -179,6 +203,7 @@ class MOFTaxScraper:
 
         if rulings:
             self.display_rulings(rulings)
+            self.save_data(rulings)
 
         print("\n" + "="*60)
         print(f"爬蟲執行完成！共取得 {len(rulings)} 筆函釋")
