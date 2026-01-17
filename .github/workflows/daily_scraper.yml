@@ -14,81 +14,64 @@ permissions:
 jobs:
   collect-tax-data:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4  # 更新到v4
-      
+      uses: actions/checkout@v4
+
     - name: Set up Python
-      uses: actions/setup-python@v5  # 更新到v5
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
-        
+        python-version: '3.11'
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        # 直接安裝必要套件
         pip install requests beautifulsoup4 pandas lxml chardet
-        
+
     - name: Create data directory
       run: mkdir -p data
-        
+
     - name: Run tax collector
       id: collector
-      continue-on-error: true
       run: |
-        # 檢查並執行爬蟲
-        if [ -f "scripts/taiwan_tax_collector.py" ]; then
-          echo "執行 taiwan_tax_collector.py"
-          python scripts/taiwan_tax_collector.py
-        else
-          echo "建立測試資料..."
-          cat > test_collector.py << 'EOF'
-import json
-import os
-from datetime import datetime
+        echo "=== Running Taiwan Tax Collector ==="
+        python scripts/taiwan_tax_collector.py
+        echo "=== Running MOF Scraper ==="
+        python scripts/mof_scraper.py
 
-os.makedirs('data', exist_ok=True)
-
-test_data = {
-    'timestamp': datetime.now().isoformat(),
-    'status': 'Test Successful',
-    'environment': 'GitHub Actions',
-    'version': 'v4-compatible',
-    'message': 'Workflow functioning with updated actions'
-}
-
-output_file = f"data/test_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-with open(output_file, 'w') as f:
-    json.dump(test_data, f, indent=2)
-
-print(f"✓ Test data created: {output_file}")
-print("✓ GitHub Actions v4 compatibility confirmed")
-EOF
-          python test_collector.py
-        fi
-        
     - name: List collected data
+      if: always()
       run: |
         echo "=== Data directory contents ==="
         ls -la data/ 2>/dev/null || echo "No data directory"
-        
+        echo "=== Sample data content ==="
+        cat data/*.json 2>/dev/null | head -50 || echo "No JSON files"
+
     - name: Upload collected data
-      if: always()  # 即使前面步驟失敗也執行
-      uses: actions/upload-artifact@v4  # 關鍵修正：使用v4
+      if: always()
+      uses: actions/upload-artifact@v4
       with:
         name: tax-data-${{ github.run_number }}
         path: data/
         retention-days: 30
         if-no-files-found: warn
-        
+
     - name: Create summary
       if: always()
       run: |
-        echo "## 執行摘要" >> $GITHUB_STEP_SUMMARY
-        echo "- 執行時間: $(date '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
-        echo "- 執行編號: #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
-        echo "- 狀態: ${{ steps.collector.outcome }}" >> $GITHUB_STEP_SUMMARY
+        echo "## 台灣稅務監控執行摘要" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- **執行時間**: $(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S') (台灣時間)" >> $GITHUB_STEP_SUMMARY
+        echo "- **執行編號**: #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **觸發方式**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
         if [ -d "data" ]; then
-          echo "- 收集檔案數: $(ls -1 data/ | wc -l)" >> $GITHUB_STEP_SUMMARY
+          FILE_COUNT=$(ls -1 data/*.json 2>/dev/null | wc -l)
+          echo "- **收集檔案數**: ${FILE_COUNT} 個 JSON 檔案" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 收集的檔案" >> $GITHUB_STEP_SUMMARY
+          ls -1 data/*.json 2>/dev/null | while read f; do echo "- \`$(basename $f)\`" >> $GITHUB_STEP_SUMMARY; done
+        else
+          echo "- **狀態**: 無資料目錄" >> $GITHUB_STEP_SUMMARY
         fi
